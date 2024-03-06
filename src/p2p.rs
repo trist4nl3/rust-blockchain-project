@@ -48,6 +48,10 @@ pub enum EventType {
     Init,
 }
 
+// App behaviour implements network behaviour, which is libp2p concept for implementing a decentralized network stack.
+// App behaviour holds our FloodSub instacne for pub/sub cmmunication and Mdns instance, which will enalbe us to automatically find other nodes on local network
+
+// Add blockchain ap as well as channels.
 #[Derive(NetworkBehaviour)]
 pub struct AppBehaviour {
     pub floodsub: Floodsub,
@@ -58,4 +62,40 @@ pub struct AppBehaviour {
     pub init_sender: mpsc::UnboundedSender,
     #[behaviour(ignore)]
     pub app: App,
+}
+
+impl AppBehaviour {
+    pub async fn new(
+        app: App,
+        response_sender: mpsc::UnboundedSender,
+        init_sender: mpsc::UnboundedSender,
+    ) -> Self {
+        let mut behaviour = Self {
+            app,
+            floodsub: Floodsub::new(*PEER_ID),
+            mdns: Mdns::new(Default::default())
+                .await
+                .expect("can create mdns"),
+            response_sender,
+            init_sender,
+        };
+        behaviour.floodsub.subscribe(CHAIN_TOPIC.clone());
+        behaviour.floodsub.subscribe(BLOCK_TOPIC.clone());
+
+        behaviour
+    }
+}
+
+// Handling incoming messages
+
+impl NetworkBehaviourEventProcess<MdnsEvent> for AppBehaviour {
+    fn inject_event(&mut self, event: MdnsEvent){
+        match event {
+            MdnsEvent::Discovered(discovered_list) => {
+                for (peer, _addr) in discovered_list {
+                    
+                }
+            }
+        }
+    }
 }
